@@ -230,7 +230,7 @@ function makeSprite(s,variant='Normal'){const key=s.id+'_'+variant;if(spriteCach
  // scales and fins highlights
  px(17,9,5,1,'rgba(255,255,255,.6)');px(15,22,5,1,'rgba(255,255,255,.4)');
  spriteCache.set(key,c);return c;}
-function drawSprite(ctx,s,variant,x,y,scale=1,flip=false,t=0){const spr=makeSprite(s,variant);ctx.save();ctx.translate(x,y+Math.sin(t*2.2)*1.5);if(flip)ctx.scale(-1,1);ctx.imageSmoothingEnabled=false;ctx.drawImage(spr,-24*scale,-16*scale,48*scale,32*scale);if(variant!=='Normal'&&state.settings.animations){const sparkle=((Math.floor(t*6)+s.name.length)%4);ctx.fillStyle=variant==='Golden'?'#fff1a0':variant==='Shadow'?'#84ffff':'#f7f6ff';ctx.fillRect((sparkle*7-11)*scale,-13*scale,2*scale,2*scale);}ctx.restore();}
+function drawSprite(ctx,s,variant,x,y,scale=1,flip=false,t=0){const spr=makeSprite(s,variant);ctx.save();ctx.translate(x,y+Math.sin(t*2.2)*1.5);{const fl=typeof flip==='number'?flip:(flip?-1:1);if(fl!==1)ctx.scale(fl,1);}ctx.imageSmoothingEnabled=false;ctx.drawImage(spr,-24*scale,-16*scale,48*scale,32*scale);if(variant!=='Normal'&&state.settings.animations){const sparkle=((Math.floor(t*6)+s.name.length)%4);ctx.fillStyle=variant==='Golden'?'#fff1a0':variant==='Shadow'?'#84ffff':'#f7f6ff';ctx.fillRect((sparkle*7-11)*scale,-13*scale,2*scale,2*scale);}ctx.restore();}
 
 // CANVAS WORLD -------------------------------------------------
 let tankCanvas=null,tankCtx=null;
@@ -265,6 +265,7 @@ function updateFish(dt,t){for(let i=0;i<state.fish.length;i++){const f=state.fis
  if(s.behavior==='school'){const others=state.fish.filter(o=>o!==f&&o.species===f.species);if(others.length){const near=others.reduce((best,o)=>Math.hypot(o.x-f.x,o.y-f.y)<Math.hypot(best.x-f.x,best.y-f.y)?o:best,others[0]);f.vx+=(near.x-f.x)*dt*.08;f.vy+=(near.y-f.y)*dt*.05;}}
  const targetX=f.x+f.vx*dt;let targetY=f.y+f.vy*dt;if(s.behavior==='bottom'||s.behavior==='eel')targetY=Math.max(340,Math.min(418,targetY));else if(s.behavior==='seahorse')targetY=Math.max(100,Math.min(360,targetY));else targetY=Math.max(90,Math.min(390,targetY));
  if(targetX<45||targetX>915)f.vx*=-1;if(targetY<65||targetY>420)f.vy*=-1;f.x=Math.max(35,Math.min(925,targetX));f.y=Math.max(65,Math.min(420,targetY));f.vx=Math.max(-speed,Math.min(speed,f.vx));f.vy=Math.max(-speed*.5,Math.min(speed*.5,f.vy));
+ if(Math.abs(f.vx)>2.5)f.face=f.vx>0?1:-1;else if(!f.face)f.face=f.vx>0?1:-1;const tgt=f.face===1?-1:1;f.fs=f.fs===undefined?tgt:f.fs+(tgt-f.fs)*Math.min(1,dt*14);
  const nearDecor=state.placed.some(d=>Math.hypot(f.x-d.x*960,f.y-d.y*480)<62);if((f.y>365||nearDecor)&&Math.random()<dt*.09)f.nibbleTimer=.7;
  }}
 function drawCondition(c,t){
@@ -276,7 +277,7 @@ function drawCondition(c,t){
   if(ta>0){for(let i=0,n=Math.floor(ta*56);i<n;i++){const x=((i*173+i*i*29)%240)*4,y=480-4*(((i*61)%(12+Math.floor(ta*60)))+1);const s=4*(2+i%4);c.fillStyle=`rgba(${58+i%3*8},${104+i%4*6},${48+i%3*6},${(.3+ta*.35).toFixed(2)})`;c.fillRect(x,y,s,s);}
     c.fillStyle=`rgba(60,104,50,${(ta*.3).toFixed(2)})`;for(let x=0;x<960;x+=24)c.fillRect(x,480-ta*56-((x/24)%3)*6,24,ta*56+((x/24)%3)*6);}
 }
-function renderTank(t){if(!tankCtx||!tankCanvas)return;const c=tankCtx;c.clearRect(0,0,960,480);drawScene(c,t);fishScreen=[];if(state.fish.length){const ordered=[...state.fish].sort((a,b)=>a.y-b.y);for(const f of ordered){const s=getSpecies(f.species);if(!s)continue;const scale=s.shape==='ray'?1.15:s.shape==='seahorse'?.88:s.shape==='eel'?.9:.9+(s.name.length%4)*.06;const wob=Math.sin(t*4+f.phase)*2+(f.idleFor>0?Math.sin(t*1.5+f.phase)*1.5:0);drawSprite(c,s,f.variant,f.x,f.y+wob,scale,f.vx<0,t+f.phase);if(f.nibbleTimer>0){c.fillStyle='rgba(218,255,242,.8)';c.fillRect(f.x+14,f.y-17,3,3);c.fillRect(f.x+19,f.y-23,2,2);}fishScreen.push({f,x:f.x,y:f.y,size:25*scale});}}else{c.fillStyle='rgba(220,255,245,.8)';c.font='18px VT323';c.fillText('Your reef is waiting for its first fish...',310,235);}
+function renderTank(t){if(!tankCtx||!tankCanvas)return;const c=tankCtx;c.clearRect(0,0,960,480);drawScene(c,t);fishScreen=[];if(state.fish.length){const ordered=[...state.fish].sort((a,b)=>a.y-b.y);for(const f of ordered){const s=getSpecies(f.species);if(!s)continue;const scale=s.shape==='ray'?1.15:s.shape==='seahorse'?.88:s.shape==='eel'?.9:.9+(s.name.length%4)*.06;const wob=Math.sin(t*4+f.phase)*2+(f.idleFor>0?Math.sin(t*1.5+f.phase)*1.5:0);const sg=f.face===1?1:-1;drawSprite(c,s,f.variant,f.x,f.y+wob,scale,f.fs!==undefined?f.fs:(f.vx>0?-1:1),t+f.phase);if(f.nibbleTimer>0){c.fillStyle='rgba(218,255,242,.8)';c.fillRect(f.x+sg*14,f.y-17,3,3);c.fillRect(f.x+sg*19,f.y-23,2,2);}fishScreen.push({f,x:f.x,y:f.y,size:25*scale});}}else{c.fillStyle='rgba(220,255,245,.8)';c.font='18px VT323';c.fillText('Your reef is waiting for its first fish...',310,235);}
  // foreground fronds and bought objects occasionally overlap fish, giving them somewhere to hide.
  for(const d of state.placed){drawDecoration(c,d.id,d.x*960,d.y*480,t);}
  drawPlant(c,48,430,48,'#2f926e',t+1);drawPlant(c,905,430,56,'#27896f',t+2);drawCondition(c,t);
